@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
-// No CSS import needed anymore
+import io from "socket.io-client"; // Import socket.io-client
+
+const socket = io("http://localhost:4000"); // Connect to your backend server
 
 const ChatRoom = () => {
   const [messages, setMessages] = useState([]);
@@ -31,8 +33,6 @@ const ChatRoom = () => {
       });
       // Clear the message input after sending
       setMessage("");
-      // Fetch messages to update the list
-      fetchMessages();
     } catch (error) {
       console.error("Error sending message:", error);
     }
@@ -45,20 +45,24 @@ const ChatRoom = () => {
     }
   };
 
+  // Listen for real-time updates from the server (new messages)
+  useEffect(() => {
+    socket.on("newMessage", (newMessage) => {
+      setMessages((prevMessages) => [...prevMessages, newMessage]);
+    });
+
+    // Fetch initial messages when the component mounts
+    fetchMessages();
+
+    return () => {
+      socket.off("newMessage"); // Clean up the event listener when the component is unmounted
+    };
+  }, []);
+
   // Scroll to bottom when new messages arrive
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
-
-  useEffect(() => {
-    // Fetch messages on component mount
-    fetchMessages();
-    // Poll for new messages every 2 seconds
-    const interval = setInterval(() => {
-      fetchMessages();
-    }, 2000);
-    return () => clearInterval(interval);
-  }, []); // Run only once on mount
 
   useEffect(() => {
     scrollToBottom();

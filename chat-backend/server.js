@@ -1,13 +1,21 @@
-// server.js
-
 const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
+const http = require("http");
+const socketIo = require("socket.io");
 const connectDb = require("./dbConnection");
 
 const ChatMessage = require("./models/ChatMessage");
 
 const app = express();
+const server = http.createServer(app); // Create server using express
+const io = socketIo(server, {
+  cors: {
+    origin: "http://localhost:3000",
+    methods: ["GET", "POST"],
+  },
+});
+
 const PORT = process.env.PORT || 4000;
 
 // Middleware
@@ -41,6 +49,9 @@ app.post("/messages", async (req, res) => {
 
     await chatMessage.save();
 
+    // Emit the new message to all connected clients
+    io.emit("newMessage", chatMessage); // Broadcast to all clients
+
     res.status(201).json(chatMessage);
   } catch (error) {
     console.error(error);
@@ -49,6 +60,6 @@ app.post("/messages", async (req, res) => {
 });
 
 // Start the server
-app.listen(PORT, () => {
+server.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
 });
